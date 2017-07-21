@@ -95,12 +95,31 @@ def in_section_words(rate_list, rate_section):  # get words within given rate se
             final_list.append(rate_tuple)
     return final_list
 
+#6. 获取释义
+def get_explanation(file_path, current_list):
+    f = codecs.open(file_path, 'r', "utf-8") #打开文件
+    lines = f.readlines()
+    word_dic = {}
+    for line in lines:
+        line = line.strip()
+        line = line.replace(']', ' ') ### BUG KILLER ### very important!!!!!!
+        words = line.split("   ") #用空格分割
+        # words = word_split(words) #用-分割  # not necessary
+        word_dic[words[0]] = words[1]
+    fi_final_list = []
+    for val in current_list:
+        if word_dic.has_key(val[0]):
+            word_tuple = (val[0], val[1], val[2], word_dic[val[0]])
+        else:
+            word_tuple = (val[0], val[1], val[2], '#暂无释义#')
+        fi_final_list.append(word_tuple)
+    return fi_final_list
 
-#6. 输出成csv
+#7. 输出成csv
 def print_to_csv(final_list, to_file_path):
     nfile = open(to_file_path,'w+')
     for val in final_list:
-        nfile.write("%s, %s, %0.2f%%\n" % (val[0], str(val[1]), val[2]))
+        nfile.write("%s, %s, %0.2f%%, %s\n" % (val[0], str(val[1]), val[2], val[3]))
     nfile.close()
 
 #4'. 输出成csv
@@ -112,16 +131,16 @@ def print_to_csv2(word_list, to_file_path):
 def main():
     #1. 读取文本
     words = read_files(get_file_from_folder('data1'))
-    print '获取了未格式化的单词 %d 个' % (len(words))
+    print '获取了未格式化的单词 %d 个' % len(words)
 
     #2. 清洗文本
     f_words = format_words(words)
-    print '获取了已经格式化的单词 %d 个 ' %(len(f_words))
+    print '获取了已经格式化的单词 %d 个 ' % len(f_words)
     total_word_count = len(f_words)
 
     #3. 统计单词和排序
     word_list = statistics_words(f_words)
-    print '最终总单词数 %d 个 ' %(len(word_list))
+    print '最终总单词数 %d 个 ' % len(word_list)
 
     # 是否进行百分比统计
     rating = True # True for rating, False for not rating
@@ -133,13 +152,20 @@ def main():
         start_and_end = [0.5, 0.7] #截取这一部分的单词
         final_list = in_section_words(rate_list, start_and_end)
 
-        #6. 输出文件
-        print_to_csv(final_list, 'output/test2.csv')
+        import sys  ### to solve UnicodeEncodeError
+        reload(sys)
+        sys.setdefaultencoding('utf-8') ###
+
+        #6. 获取释义
+        fi_final_list = get_explanation('8000-words.txt', final_list)
+        print '生成单词表，应背单词 %d 个' % len(fi_final_list)
+
+        #7. 输出文件
+        print_to_csv(fi_final_list, 'output/with_meaning.csv')
+
     else: # not rating
         #4'. 输出文件
-        print_to_csv2(word_list, 'output/test3.csv')
-
-
+        print_to_csv2(word_list, 'output/all_words.csv')
 
 if __name__ == "__main__":
     main()
