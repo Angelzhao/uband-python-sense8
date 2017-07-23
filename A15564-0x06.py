@@ -102,10 +102,21 @@ def get_explanation(file_path, current_list):
     word_dic = {}
     for line in lines:
         line = line.strip()
-        line = line.replace(']', ' ') ### BUG KILLER ### very important!!!!!!
-        words = line.split("   ") #用空格分割
-        # words = word_split(words) #用-分割  # not necessary
+        ###1 len(word_dic) == 7982
+        # line = line.replace(']', ' ') ### BUG KILLER ### very important!!!!!!
+        # words = line.split("   ") #用空格分割
+
+        ###2 len(word_dic) == 7977
+        words = line.split(' ', 1) # split the first space
+        words2 = []
+        for word in words:
+            word = word.strip() # strip spaces before and behind meaning
+            if word:
+                words2.append(word) # remove ''
+        words = words2
+
         word_dic[words[0]] = words[1]
+    # print len(word_dic)
     fi_final_list = []
     for val in current_list:
         if word_dic.has_key(val[0]):
@@ -120,6 +131,24 @@ def print_to_csv(final_list, to_file_path):
     nfile = open(to_file_path,'w+')
     for val in final_list:
         nfile.write("%s, %s, %0.2f%%, %s\n" % (val[0], str(val[1]), val[2], val[3]))
+    nfile.close()
+
+#8. 生成每日单词表
+def create_daily_lists(fi_final_list, daily_amount, list_number, to_folder_path):
+    item_index = 0
+    day_index = 1
+
+    while day_index < list_number: # till day before the last day
+        nfile = open('%s%s.csv' % (to_folder_path, day_index), 'w+')
+        for val in fi_final_list[item_index : item_index + daily_amount]:
+            nfile.write("%s, %s, %0.2f%%, %s\n" % (val[0], str(val[1]), val[2], val[3]))
+        nfile.close()
+        item_index += daily_amount
+        day_index += 1
+    nfile = open('%s%s.csv' % (to_folder_path, day_index), 'w+')
+
+    for val in fi_final_list[item_index : ]: # the last day
+            nfile.write("%s, %s, %0.2f%%, %s\n" % (val[0], str(val[1]), val[2], val[3]))
     nfile.close()
 
 #4'. 输出成csv
@@ -158,10 +187,31 @@ def main():
 
         #6. 获取释义
         fi_final_list = get_explanation('8000-words.txt', final_list)
-        print '生成单词表，应背单词 %d 个' % len(fi_final_list)
+        total_amount = len(fi_final_list)
+        print '获得累计百分比范围内单词 %d 个' % total_amount
 
         #7. 输出文件
         print_to_csv(fi_final_list, 'output/with_meaning.csv')
+
+        #8. 生成每日单词表
+        daily_amount = 50
+        if total_amount % daily_amount == 0:
+            list_number = total_amount / daily_amount
+        else:
+            list_number = total_amount / daily_amount + 1
+            last_list_number = total_amount % daily_amount
+
+
+        # 单词表是否乱序
+        out_of_order = True # True for disordered lists, False for sequenced lists
+        if out_of_order: 
+            import random
+            random.shuffle(fi_final_list)
+
+        if not os.path.exists('output/daily_lists/'): ### 强迫症 
+            os.mkdir('output/daily_lists/')                      ###
+        create_daily_lists(fi_final_list, daily_amount, list_number, 'output/daily_lists/')
+        print '生成单词表 %d 个，除最终表外每表含单词 %d 个，最终表含单词 %d 个' % (list_number, daily_amount, last_list_number)
 
     else: # not rating
         #4'. 输出文件
